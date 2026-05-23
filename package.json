@@ -1,0 +1,51 @@
+{
+  "name": "autonomous-iptv-system",
+  "version": "1.0.0",
+  "description": "Fully autonomous IPTV system with automatic source discovery, validation, playlist and EPG generation",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "validate": "node core/validator.js",
+    "check-streams": "node core/streamChecker.js",
+    "generate-playlists": "node core/playlistGenerator.js",
+    "generate-epg": "core/epgGenerator.js",
+    "crawl-sources": "node core/sourceCrawler.js",
+    "full-update": "node core/autoUpdater.js",
+    "cleanup": "node utils/cleanup.js",
+    "test": "node tests/testSuite.js",
+    "docker-build": "docker build -t autonomous-iptv-system .",
+    "docker-run": "docker run -it autonomous-iptv-system"
+  },
+  "keywords": [
+    "iptv",
+    "m3u",
+    "epg",
+    "playlist",
+    "streaming",
+    "autonomous",
+    "crawler"
+  ],
+  "author": "FastSayj",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.5",
+    "dotenv": "^16.3.1",
+    "pino": "^8.17.2",
+    "pino-pretty": "^10.2.3",
+    "uuid": "^9.0.1",
+    "node-cache": "^5.1.2",
+    "p-queue": "^7.4.1",
+    "xml2js": "^0.6.2",
+    "cheerio": "^1.0.0-rc.12",
+    "crypto-js": "^4.2.0",
+    "mime-types": "^2.1.35",
+    "iconv-lite": "^0.6.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
