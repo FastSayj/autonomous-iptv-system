@@ -1,0 +1,93 @@
+name: Automatic Playlist Update
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Run every 6 hours
+  workflow_dispatch:  # Allow manual trigger
+  push:
+    branches:
+      - main
+    paths:
+      - 'sources/**'
+      - 'config/**'
+
+jobs:
+  update-playlist:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Create .env file
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
+          echo "LOG_LEVEL=info" >> .env
+          echo "MAX_CONCURRENT_CHECKS=50" >> .env
+          echo "TIMEOUT_MS=10000" >> .env
+      
+      - name: Run source discovery
+        run: npm run crawl
+        continue-on-error: true
+      
+      - name: Validate streams
+        run: npm run validate
+        continue-on-error: true
+      
+      - name: Generate playlists
+        run: node scripts/generatePlaylists.js
+        continue-on-error: true
+      
+      - name: Generate EPG
+        run: npm run generate-epg
+        continue-on-error: true
+      
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if git diff --quiet playlists/ epg/; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Commit and push changes
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add playlists/ epg/
+          git commit -m "chore: auto-update playlists and EPG [skip ci]"
+          git push
+      
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playlist-update-logs
+          path: logs/
+          retention-days: 7
+      
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ Playlist update workflow failed. Check logs for details.'
+            })
